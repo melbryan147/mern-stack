@@ -1,0 +1,45 @@
+const db = require('../db');
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+const { createUser, findUserByEmail } = require('../models/userModel');
+
+// Activate/Deactivate user
+async function toggleUserStatus(req, res) {
+//   const { targetUserId, action, performedBy, performerRole } = req.body;
+//   // const performedBy = req.user.userId; // from JWT middleware
+//   // const performerRole = req.user.role;
+
+//   // Role check
+//   if (performerRole === 'admin' || performerRole === 'super_admin') {
+//     // Admins cannot manage other admins or super_admins
+//     const [rows] = await db.execute('SELECT role FROM users WHERE user_id = ?', [targetUserId]);
+//     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+//     if (rows[0].role !== 'user') return res.status(403).json({ error: 'Admins can only manage users' });
+//   }
+
+//   const newStatus = action === 'activate';
+//   await db.execute('UPDATE users SET is_active = ? WHERE user_id = ?', [newStatus, targetUserId]);
+
+//   await db.execute(
+//     'INSERT INTO user_management_actions (performed_by, target_user, action) VALUES (?, ?, ?)',
+//     [performedBy, targetUserId, action]
+//   );
+
+//   res.json({ message: `User ${action}d successfully` });
+res.json({ message: `Not Implemented Yet` })
+}
+async function insertUser(req, res) {
+      const { username, email, password } = req.body;
+     const hash = await bcrypt.hash(password, 10);
+     const userId = await createUser(username, email, hash);
+    res.json({ message: 'User created', userId });
+}
+async function updateUser(req, res) {
+  res.json({ message: `Not Implemented Yet` });
+}
+
+async function deleteUser(req, res) {
+  res.json({ message: `Not Implemented Yet` });
+}
+
+module.exports = { toggleUserStatus, createUser, updateUser, deleteUser };
