@@ -134,7 +134,10 @@ async function protect(req, res, next) {
     console.log(token)
 
     if(isStartBearer === true && token !== undefined || token !== '' && isStartBearer !== undefined) {
-        console.log(verifyToken(token))
+        const {userId} = verifyToken(token)
+        const [currentUser] = await db.pool.execute('SELECT role FROM users WHERE user_id = ?', [userId]);
+        req.performerRole = currentUser[0].role
+        req.performBy = currentUser[0].user_id
         next()
         // let { role_id }=  verifyToken(token) 
         // console.log(role_id)

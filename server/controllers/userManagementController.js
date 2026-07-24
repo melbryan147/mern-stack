@@ -5,14 +5,14 @@ const { createUser, findUserByEmail } = require('../models/userModel');
 
 // Activate/Deactivate user
 async function toggleUserStatus(req, res) {
-  const { targetUserId, action} = req.body;
+  const { targetUserId, action, performedBy } = req.body;
   const newStatus = action === 'activate';
   await db.pool.execute('UPDATE users SET is_active = ? WHERE user_id = ?', [newStatus, targetUserId]);
 
-  // await db.pool.execute(
-  //   'INSERT INTO user_management_actions (performed_by, target_user, action) VALUES (?, ?, ?)',
-  //   [per, targetUserId, action]
-  // );
+  await db.pool.execute(
+    'INSERT INTO user_management_actions (performed_by, target_user, action) VALUES (?, ?, ?)',
+    [performedBy, targetUserId, action]
+  );
 
   res.json({ message: `User ${action}d successfully` });
 }
