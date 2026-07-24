@@ -1,6 +1,6 @@
 const db = require('../db');
 
-async function createUser(username, email, passwordHash, role = 'user') {
+async function createUser(username, email, passwordHash, role) {
   try {
     const [result] = await db.pool.execute(
       'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
