@@ -5,41 +5,90 @@ const { createUser, findUserByEmail } = require('../models/userModel');
 
 // Activate/Deactivate user
 async function toggleUserStatus(req, res) {
-//   const { targetUserId, action, performedBy, performerRole } = req.body;
+  const { targetUserId, action, performedBy, performerRole } = req.body;
 //   // const performedBy = req.user.userId; // from JWT middleware
 //   // const performerRole = req.user.role;
 
 //   // Role check
-//   if (performerRole === 'admin' || performerRole === 'super_admin') {
-//     // Admins cannot manage other admins or super_admins
-//     const [rows] = await db.execute('SELECT role FROM users WHERE user_id = ?', [targetUserId]);
-//     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
-//     if (rows[0].role !== 'user') return res.status(403).json({ error: 'Admins can only manage users' });
-//   }
+  if (performerRole === 'admin' || performerRole === 'super_admin') {
+    // Admins cannot manage other admins or super_admins
+    const [rows] = await db.pool.execute('SELECT role FROM users WHERE user_id = ?', [targetUserId]);
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    if (rows[0].role !== 'user') return res.status(403).json({ error: 'Admins can only manage users' });
+  }
+  const newStatus = action === 'activate';
+  await db.pool.execute('UPDATE users SET is_active = ? WHERE user_id = ?', [newStatus, targetUserId]);
 
-//   const newStatus = action === 'activate';
-//   await db.execute('UPDATE users SET is_active = ? WHERE user_id = ?', [newStatus, targetUserId]);
+  await db.pool.execute(
+    'INSERT INTO user_management_actions (performed_by, target_user, action) VALUES (?, ?, ?)',
+    [performedBy, targetUserId, action]
+  );
 
-//   await db.execute(
-//     'INSERT INTO user_management_actions (performed_by, target_user, action) VALUES (?, ?, ?)',
-//     [performedBy, targetUserId, action]
-//   );
-
-//   res.json({ message: `User ${action}d successfully` });
-res.json({ message: `Not Implemented Yet` })
+  res.json({ message: `User ${action}d successfully` });
 }
 async function insertUser(req, res) {
-      const { username, email, password } = req.body;
-     const hash = await bcrypt.hash(password, 10);
-     const userId = await createUser(username, email, hash);
+  try {
+    const { username, email, password} = req.body;
+    const hash = await bcrypt.hash(password, 10);
+    const userId = await createUser(username, email, hash);
     res.json({ message: 'User created', userId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
 async function updateUser(req, res) {
-  res.json({ message: `Not Implemented Yet` });
+  try {
+    const { userId } = req.params;
+    const [rows] = await db.pool.execute('SELECT * FROM users WHERE user_id = ?',[userId]);
+    const {username, email, role} = req.body;
+    let objUUpdate = {}
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    if (username === undefined) objUUpdate.username = rows[0].username;
+    if (email === undefined) objUUpdate.email = rows[0].email;
+    if (role === undefined) objUUpdate.role = rows[0].role;
+    console.log(objUUpdate)
+    await db.pool.execute('UPDATE users SET username = ?, email = ?, role = ? WHERE user_id = ?', [username || objUUpdate.username, email || objUUpdate.email, role || objUUpdate.role, userId]);
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
 
 async function deleteUser(req, res) {
-  res.json({ message: `Not Implemented Yet` });
+  try {
+    const { userId } = req.params;
+    await db.pool.execute('DELETE FROM users WHERE user_id = ?', [userId]);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
 
-module.exports = { toggleUserStatus, createUser, updateUser, deleteUser };
+
+async function getUserById(req, res) {
+  try {
+    const { userId } = req.params;
+    const [rows] = await db.pool.execute('SELECT * FROM users WHERE user_id = ?', [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+async function getAllUsers(req, res) {
+  try {
+    const [rows] = await db.pool.execute('SELECT * FROM users');
+    res.json(rows);
+  }
+  catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+module.exports = { toggleUserStatus, insertUser, updateUser, deleteUser, getUserById, getAllUsers };
