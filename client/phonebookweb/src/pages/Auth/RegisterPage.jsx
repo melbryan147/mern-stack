@@ -60,8 +60,8 @@ export default function RegisterPage() {
         {/* Role Selection */}
         <select name="role" value={form.role} onChange={handleChange}>
           <option value="user">User</option>
-          <option value="admin">Admin</option>
-          <option value="manager">Manager</option>
+          <option value="admin">admin</option>
+          <option value="superadmin">superadmin</option>
         </select>
 
         <button type="submit">Register</button>

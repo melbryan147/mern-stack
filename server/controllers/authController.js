@@ -27,7 +27,7 @@ async function signin(req, res) {
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const token = jwt.sign({ userId: user.user_id }, SECRET, { expiresIn: '1h' });
+  const token = jwt.sign({ userId: user.user_id, role: user.role }, SECRET, { expiresIn: '1h' });
   await createSession(user.user_id, token, req.ip, req.headers['user-agent'], new Date(Date.now() + 3600000));
 
   res.json({ message: 'Login successful', token });

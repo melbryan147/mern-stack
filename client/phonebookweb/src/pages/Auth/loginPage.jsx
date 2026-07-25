@@ -1,8 +1,11 @@
 // src/pages/Auth/LoginPage.jsx
 import { useState } from "react";
+import { loginUser } from "../../services/authService";
+import {useNavigate} from "react-router-dom";
 // import { useAuth } from "../../hooks/useAuth";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   // const { login } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
 
@@ -12,7 +15,19 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // await login(form); // calls AuthContext login
+    try {
+      const userData = await loginUser(form);
+      console.log("Login successful:", userData);
+      // Handle successful login (e.g., store token, redirect)
+      navigate("/ums"); // Redirect to a protected route after login
+      if (userData.role === "admin" || userData.role === "superadmin") {
+        navigate("/ums"); // Redirect to admin dashboard
+      }else if (userData.role === "user") {
+        navigate("/phonebook"); // Redirect to user dashboard
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    }
   };
 
   return (

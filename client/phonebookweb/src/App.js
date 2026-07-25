@@ -5,6 +5,7 @@ import LoginPage from "./pages/Auth/loginPage";
 import RegisterPage from "./pages/Auth/RegisterPage";
 import UMSLayout from "./layouts/UMSLayout.jsx";
 import PhoneBookLayout from "./layouts/PhoneBookLayout";
+import PhoneBookNab from "./layouts/PhoneBookNab";
 
 function App() {
   return (
@@ -12,8 +13,13 @@ function App() {
       <BrowserRouter>
 
         <Routes>
-          <Route path="/auth/login" element={<LoginPage />} />
-          <Route path="/auth/register" element={<RegisterPage />} />
+          <Route path="/" element={<PhoneBookNab />}>
+            <Route index path="homepage" element={<div>Home</div>} />
+            <Route path="login" element={<LoginPage />} />
+            <Route path="register" element={<RegisterPage />} />
+          </Route>
+           <Route path="/ums/*" element={<UMSLayout/>} />
+           <Route path="/phonebook/*" element={<PhoneBookLayout/>} />
           {/* <Route
             path="/ums/*"
             element={
