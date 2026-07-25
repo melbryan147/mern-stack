@@ -1,8 +1,8 @@
-const pool = require('../db');
+const db = require('../db');
 
 // ✅ Add new contact with numbers
 exports.addContact = async (req, res) => {
-  const connection = await pool.getConnection();
+  const connection = await db.pool.getConnection();
   try {
     const { lastname, firstname, email, contact_numbers } = req.body;
 
@@ -39,7 +39,7 @@ exports.addContact = async (req, res) => {
 // ✅ Get all contacts with numbers
 exports.getContacts = async (req, res) => {
   try {
-    const [rows] = await pool.query(`
+    const [rows] = await db.pool.query(`
       SELECT c.contact_id, c.firstname, c.lastname, c.email, cn.contact_number
       FROM contacts c
       LEFT JOIN contact_numbers cn ON c.contact_id = cn.contact_id
@@ -71,7 +71,7 @@ exports.getContacts = async (req, res) => {
 
 // ✅ Update contact (basic info + replace numbers)
 exports.updateContact = async (req, res) => {
-  const connection = await pool.getConnection();
+  const connection = await db.pool.getConnection();
   try {
     const { id } = req.params;
     const { lastname, firstname, email, contact_numbers } = req.body;
@@ -110,8 +110,53 @@ exports.updateContact = async (req, res) => {
 exports.deleteContact = async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query(`DELETE FROM contacts WHERE contact_id = ?`, [id]);
+    await db.pool.query(`DELETE FROM contacts WHERE contact_id = ?`, [id]);
     res.json({ message: 'Contact deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Share a contact
+exports.shareContact = async (req, res) => {
+  try {
+    const { contactId, sharedUserId } = req.body;
+    await pool.query(
+      `INSERT INTO contact_shares (contact_id, shared_user_id) VALUES (?, ?)`,
+      [contactId, sharedUserId]
+    );
+    res.json({ message: 'Contact shared successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Unshare a contact
+exports.unshareContact = async (req, res) => {
+  try {
+    const { contactId, sharedUserId } = req.body;
+    await pool.query(
+      `DELETE FROM contact_shares WHERE contact_id = ? AND shared_user_id = ?`,
+      [contactId, sharedUserId]
+    );
+    res.json({ message: 'Contact unshared successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get contacts visible to current user
+exports.getContactsForUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [rows] = await pool.query(`
+      SELECT DISTINCT c.contact_id, c.firstname, c.lastname, c.email
+      FROM contacts c
+      LEFT JOIN contact_shares cs ON c.contact_id = cs.contact_id
+      WHERE c.owner_id = ? OR cs.shared_user_id = ?
+    `, [userId, userId]);
+
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
