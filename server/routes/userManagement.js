@@ -3,7 +3,7 @@ const { toggleUserStatus, insertUser,updateUser,deleteUser, getUserById, getAllU
 const {protect, isSamerole} = require('../middleware/index');
 const router = express.Router();
 
-router.post('/toggle', protect,isSamerole, toggleUserStatus);
+router.put('/toggle', protect,isSamerole, toggleUserStatus);
 router.post('/insert', protect, insertUser);
 router.get('/get/:userId', protect, getUserById);
 router.get('/all', protect, getAllUsers);

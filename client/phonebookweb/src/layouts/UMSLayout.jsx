@@ -1,106 +1,99 @@
-import React, { useState } from "react";
-import { logoutUser } from "../services/authService";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import {
+  getUsers,
+  addUser,
+  updateUser,
+  deleteUser,
+  toggleActive,
+} from "../services/userService";
 
 const UserTable = () => {
-  const navigate = useNavigate();
-  function handleLogout() {
-    logoutUser();
-    navigate("/login"); // Redirect to login page after logout
-  }
-  const [users, setUsers] = useState([
-    {
-      userId: 1,
-      email: "alice@example.com",
-      role: "admin",
-      isActive: true,
-      createdAt: "2026-07-20",
-      updatedAt: "2026-07-23",
-    },
-    {
-      userId: 2,
-      email: "bob@example.com",
-      role: "user",
-      isActive: false,
-      createdAt: "2026-07-21",
-      updatedAt: "2026-07-23",
-    },
-  ]);
-
+  const [users, setUsers] = useState([]);
   const [newUser, setNewUser] = useState({
+    username: "",
     email: "",
     role: "user",
-    isActive: true,
+    is_active: true,
+    password_hash: "",
+  });
+  const [editUserId, setEditUserId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    username: "",
+    email: "",
+    role: "",
+    is_active: true,
+    password_hash: "",
   });
 
-  const [editUserId, setEditUserId] = useState(null);
-  const [editForm, setEditForm] = useState({ email: "", role: "", isActive: true });
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
-  // Toggle Active
-  const toggleActive = (id) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.userId === id
-          ? { ...user, isActive: !user.isActive, updatedAt: new Date().toISOString().split("T")[0] }
-          : user
-      )
-    );
+  const loadUsers = async () => {
+    const data = await getUsers();
+    setUsers(data);
   };
 
-  // Delete User
-  const deleteUser = (id) => {
-    setUsers((prev) => prev.filter((user) => user.userId !== id));
+  const handleAdd = async () => {
+    if (!newUser.username || !newUser.email) return;
+    const user = await addUser(newUser);
+    setUsers((prev) => [...prev, user]);
+    setNewUser({ username: "", email: "", role: "user", is_active: true, password_hash: "" });
   };
 
-  // Add User
-  const addUser = () => {
-    const nextId = users.length ? Math.max(...users.map((u) => u.userId)) + 1 : 1;
-    const today = new Date().toISOString().split("T")[0];
-    setUsers([
-      ...users,
-      {
-        userId: nextId,
-        email: newUser.email,
-        role: newUser.role,
-        isActive: newUser.isActive,
-        createdAt: today,
-        updatedAt: today,
-      },
-    ]);
-    setNewUser({ email: "", role: "user", isActive: true });
-  };
-
-  // Start Editing
-  const startEdit = (user) => {
-    setEditUserId(user.userId);
-    setEditForm({ email: user.email, role: user.role, isActive: user.isActive });
-  };
-
-  // Save Update
-  const saveUpdate = () => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.userId === editUserId
-          ? { ...user, ...editForm, updatedAt: new Date().toISOString().split("T")[0] }
-          : user
-      )
-    );
+  const handleUpdate = async () => {
+    const updated = await updateUser(editUserId, editForm);
+    setUsers((prev) => prev.map((u) => (u.user_id === editUserId ? updated : u)));
     setEditUserId(null);
-    setEditForm({ email: "", role: "", isActive: true });
+    setEditForm({ username: "", email: "", role: "", is_active: true, password_hash: "" });
+  };
+
+  const handleDelete = async (id) => {
+    await deleteUser(id);
+    setUsers((prev) => prev.filter((u) => u.user_id !== id));
+  };
+
+  const handleToggle = async (id) => {
+    // const updated = await toggleActive({ targetUserId: id, action: toggleValue ? "activate" : "deactivate", performedBy: "current_user_id" });
+
+    const updated = "deactivate"
+    setUsers((prev) => prev.map((u) => (u.user_id === id ? updated : u)));
+  };
+
+  const startEdit = (user) => {
+    setEditUserId(user.user_id);
+    setEditForm({
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      is_active: user.is_active,
+      password_hash: user.password_hash,
+    });
   };
 
   return (
-  <>
     <div>
       <h2>User Management Table</h2>
-      <button onClick={handleLogout} style={{ marginBottom: "20px" }}>Logout</button>
+
       {/* Add User Form */}
       <div style={{ marginBottom: "20px" }}>
+        <input
+          type="text"
+          placeholder="Username"
+          value={newUser.username}
+          onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+        />
         <input
           type="text"
           placeholder="Email"
           value={newUser.email}
           onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={newUser.password_hash}
+          onChange={(e) => setNewUser({ ...newUser, password_hash: e.target.value })}
         />
         <select
           value={newUser.role}
@@ -110,15 +103,17 @@ const UserTable = () => {
           <option value="admin">Admin</option>
           <option value="super_admin">Super Admin</option>
         </select>
-        <button onClick={addUser}>Add User</button>
+        <button onClick={handleAdd}>Add User</button>
       </div>
 
       {/* Table */}
       <table border="1" cellPadding="10" style={{ width: "100%", textAlign: "center" }}>
         <thead>
           <tr>
-            <th>UserID</th>
+            <th>User ID</th>
+            <th>Username</th>
             <th>Email</th>
+            <th>Password Hash</th>
             <th>Role</th>
             <th>Is Active</th>
             <th>Created At</th>
@@ -128,14 +123,28 @@ const UserTable = () => {
         </thead>
         <tbody>
           {users.map((user) =>
-            editUserId === user.userId ? (
-              <tr key={user.userId}>
-                <td>{user.userId}</td>
+            editUserId === user.user_id ? (
+              <tr key={user.user_id}>
+                <td>{user.user_id}</td>
+                <td>
+                  <input
+                    type="text"
+                    value={editForm.username}
+                    onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                  />
+                </td>
                 <td>
                   <input
                     type="text"
                     value={editForm.email}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="password"
+                    value={editForm.password_hash}
+                    onChange={(e) => setEditForm({ ...editForm, password_hash: e.target.value })}
                   />
                 </td>
                 <td>
@@ -151,42 +160,44 @@ const UserTable = () => {
                 <td>
                   <input
                     type="checkbox"
-                    checked={editForm.isActive}
-                    onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                    checked={editForm.is_active}
+                    onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
                   />
                 </td>
-                <td>{user.createdAt}</td>
-                <td>{user.updatedAt}</td>
+                <td>{user.created_at}</td>
+                <td>{user.updated_at}</td>
                 <td>
-                  <button onClick={saveUpdate}>Save</button>
+                  <button onClick={handleUpdate}>Save</button>
                   <button onClick={() => setEditUserId(null)}>Cancel</button>
                 </td>
               </tr>
             ) : (
-              <tr key={user.userId}>
-                <td>{user.userId}</td>
+              <tr key={user.user_id}>
+                <td>{user.user_id}</td>
+                <td>{user.username}</td>
                 <td>{user.email}</td>
+                <td>{user.password_hash}</td>
                 <td>{user.role}</td>
                 <td>
                   <button
-                    onClick={() => toggleActive(user.userId)}
+                    onClick={() => handleToggle(user.user_id, { is_active: !user.is_active })}
                     style={{
-                      backgroundColor: user.isActive ? "green" : "red",
+                      backgroundColor: user.is_active ? "green" : "red",
                       color: "white",
                       border: "none",
                       padding: "5px 10px",
                       cursor: "pointer",
                     }}
                   >
-                    {user.isActive ? "Active" : "Inactive"}
+                    {user.is_active ? "Active" : "Inactive"}
                   </button>
                 </td>
-                <td>{user.createdAt}</td>
-                <td>{user.updatedAt}</td>
+                <td>{user.created_at}</td>
+                <td>{user.updated_at}</td>
                 <td>
                   <button onClick={() => startEdit(user)}>Update</button>
                   <button
-                    onClick={() => deleteUser(user.userId)}
+                    onClick={() => handleDelete(user.user_id)}
                     style={{ marginLeft: "5px", backgroundColor: "darkred", color: "white" }}
                   >
                     Delete
@@ -198,7 +209,6 @@ const UserTable = () => {
         </tbody>
       </table>
     </div>
-    </>
   );
 };
 
