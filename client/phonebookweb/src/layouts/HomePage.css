@@ -1,0 +1,27 @@
+.homepage-container {
+  background: linear-gradient(135deg, #007bff, #6610f2);
+  color: white;
+  text-align: center;
+}
+
+.jumping-text {
+  font-size: clamp(2rem, 5vw, 5rem); /* ✅ Responsive font size */
+  font-weight: bold;
+  display: inline-block;
+}
+
+.jumping-text span {
+  display: inline-block;
+  animation: jump 1s infinite;
+  color: #ffeb3b; /* Yellow letters */
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+
+@keyframes jump {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}

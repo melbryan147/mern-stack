@@ -1,12 +1,9 @@
-// src/pages/Auth/LoginPage.jsx
 import { useState } from "react";
 import { loginUser } from "../../services/authService";
-import {useNavigate} from "react-router-dom";
-// import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  // const { login } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
 
   const handleChange = (e) => {
@@ -18,12 +15,14 @@ export default function LoginPage() {
     try {
       const userData = await loginUser(form);
       console.log("Login successful:", userData);
-      // Handle successful login (e.g., store token, redirect)
-      navigate("/ums"); // Redirect to a protected route after login
+
+      // Redirect based on role
       if (userData.role === "admin" || userData.role === "superadmin") {
-        navigate("/ums"); // Redirect to admin dashboard
-      }else if (userData.role === "user") {
-        navigate("/phonebook"); // Redirect to user dashboard
+        navigate("/ums");
+      } else if (userData.role === "user") {
+        navigate("/phonebook");
+      } else {
+        navigate("/homepage");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -31,27 +30,51 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-container">
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
-        <button type="submit">Login</button>
-      </form>
+    <div className="container d-flex justify-content-center align-items-center vh-100">
+      <div className="card shadow-sm p-4" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 className="text-center text-primary mb-4">🔑 Login</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Email</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              value={form.email}
+              onChange={handleChange}
+              required
+              className="form-control"
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Password</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="Enter your password"
+              value={form.password}
+              onChange={handleChange}
+              required
+              className="form-control"
+            />
+          </div>
+          <button type="submit" className="btn btn-success w-100">
+            Login
+          </button>
+        </form>
+        <div className="text-center mt-3">
+          <small>
+            Don’t have an account?{" "}
+            <span
+              className="text-primary"
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate("/register")}
+            >
+              Register
+            </span>
+          </small>
+        </div>
+      </div>
     </div>
   );
 }
