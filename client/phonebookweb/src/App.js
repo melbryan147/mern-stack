@@ -7,6 +7,7 @@ import UMSLayout from "./layouts/UMSLayout.jsx";
 import PhoneBookLayout from "./layouts/PhoneBookLayout";
 import PhoneBookNab from "./layouts/PhoneBookNab";
 import HomePage from "./layouts/HomePage";
+import ResetPasswordPage from "./pages/Auth/ResetPasswordPage";
 function App() {
   return (
     <AuthProvider>
@@ -18,6 +19,7 @@ function App() {
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
           </Route>
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
            <Route path="/ums/*" element={<UMSLayout/>} />
            <Route path="/phonebook/*" element={<PhoneBookLayout/>} />
         </Routes>

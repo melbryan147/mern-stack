@@ -8,7 +8,7 @@ import {
 import {
   shareContact,
   unshareContact,
-} from "../services/shareContactService"; // ✅ import share services
+} from "../services/shareContactService";
 import { useNavigate } from "react-router-dom";
 
 export default function PhoneBook() {
@@ -20,9 +20,9 @@ export default function PhoneBook() {
     lastname: "",
     email: "",
     contact_numbers: [""],
+    photo_url: "", // ✅ new field for profile upload
   });
 
-  // State for sharing
   const [shareForm, setShareForm] = useState({ contactId: null, sharedUserId: "" });
 
   useEffect(() => {
@@ -37,9 +37,14 @@ export default function PhoneBook() {
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
+  const handleFileChange = (e) => {
+    setForm({ ...form, photo_url: e.target.files[0] }); // ✅ store file object
+  };
+
   const handleNumberChange = (index, value) => {
     const numbers = [...form.contact_numbers];
     numbers[index] = value;
+    console.log(numbers);
     setForm({ ...form, contact_numbers: numbers });
   };
 
@@ -52,30 +57,55 @@ export default function PhoneBook() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+
+  const formData = new FormData();
+  formData.append("firstname", form.firstname);
+  formData.append("lastname", form.lastname);
+  formData.append("email", form.email);
+  form.contact_numbers.forEach((num, i) =>
+    formData.append(`contact_numbers[${i}]`, num)
+  );
+  if (form.photo_url) {
+    formData.append("photo_url", form.photo_url);
+  }
+
+  try {
     if (form.contact_id) {
-      await updateContact(form.contact_id, form);
+      await updateContact(form.contact_id, formData);
+      alert("✅ Contact updated successfully!");
     } else {
-      await addContact(form);
+      await addContact(formData);
+      alert("✅ Contact added successfully!");
     }
+
     setForm({
       contact_id: null,
       firstname: "",
       lastname: "",
       email: "",
       contact_numbers: [""],
+      photo_url: "",
     });
     fetchContacts();
-  };
+  } catch (error) {
+    console.error(error);
+    alert("❌ Failed to save contact. Please try again.");
+  }
+};
 
   const handleEdit = (contact) => setForm(contact);
 
-  const handleDelete = async (id) => {
+const handleDelete = async (id) => {
+  try {
     await deleteContact(id);
+    alert("✅ Contact deleted successfully!");
     fetchContacts();
-  };
-
-  // Share handlers
+  } catch (error) {
+    console.error(error);
+    alert("❌ Failed to delete contact. Please try again.");
+  }
+};
   const openShareForm = (contactId) => {
     setShareForm({ contactId, sharedUserId: "" });
   };
@@ -95,10 +125,7 @@ export default function PhoneBook() {
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-primary">📒 Phone Book</h2>
-        <button
-          className="btn btn-danger"
-          onClick={() => navigate("/login")}
-        >
+        <button className="btn btn-danger" onClick={() => navigate("/login")}>
           Logout
         </button>
       </div>
@@ -106,7 +133,7 @@ export default function PhoneBook() {
       {/* Form */}
       <div className="card shadow-sm mb-4">
         <div className="card-body">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} encType="multipart/form-data">
             <div className="row g-3">
               <div className="col-md-4">
                 <input
@@ -137,6 +164,18 @@ export default function PhoneBook() {
                   className="form-control"
                 />
               </div>
+            </div>
+
+            {/* ✅ Profile Upload */}
+            <div className="mt-3">
+              <label className="form-label">Upload Profile Photo</label>
+              <input
+                type="file"
+                name="photo_url"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="form-control"
+              />
             </div>
 
             <div className="mt-3">
@@ -173,64 +212,73 @@ export default function PhoneBook() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="table-responsive">
-        <table className="table table-striped table-bordered table-hover align-middle">
-          <thead className="table-primary">
-            <tr>
-              <th>Profile</th>
-              <th>Firstname</th>
-              <th>Lastname</th>
-              <th>Email</th>
-              <th>Contact Numbers</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contacts.map((c) => (
-              <tr key={c.contact_id}>
-                <td>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                    alt="profile"
-                    className="rounded-circle"
-                    width="40"
-                    height="40"
-                  />
-                </td>
-                <td>{c.firstname}</td>
-                <td>{c.lastname}</td>
-                <td>{c.email}</td>
-                <td>{c.contact_numbers.join(", ")}</td>
-                <td>
-                  <div className="d-flex gap-2">
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => handleEdit(c)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => handleDelete(c.contact_id)}
-                    >
-                      Delete
-                    </button>
-                    <button
-                      className="btn btn-sm btn-warning"
-                      onClick={() => openShareForm(c.contact_id)}
-                    >
-                      Share
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+{/* Table */}
+<div className="table-responsive">
+  <table className="table table-striped table-bordered table-hover align-middle">
+    <thead className="table-primary">
+      <tr>
+        <th>Profile</th>
+        <th>Firstname</th>
+        <th>Lastname</th>
+        <th>Email</th>
+        <th>Contact Numbers</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {contacts.map((c) => (
+        <tr key={c.contact_id}>
+          <td>
+            <img
+              src={c.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+              alt="profile"
+              className="rounded-circle"
+              width="40"
+              height="40"
+            />
+          </td>
+          <td>{c.firstname}</td>
+          <td>{c.lastname}</td>
+          <td>{c.email}</td>
+          <td>
+            {/* ✅ Dropdown for contact numbers */}
+            <select className="form-select form-select-sm">
+              {c.contact_numbers.map((num, idx) => (
+                <option key={idx} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+          </td>
+          <td>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => handleEdit(c)}
+              >
+                Edit
+              </button>
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => handleDelete(c.contact_id)}
+              >
+                Delete
+              </button>
+              <button
+                className="btn btn-sm btn-warning"
+                onClick={() => openShareForm(c.contact_id)}
+              >
+                Share
+              </button>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
-      {/* Share Contact Form (inline modal style) */}
+      {/* Share Contact Form */}
       {shareForm.contactId && (
         <div className="card shadow-sm mt-3">
           <div className="card-body">

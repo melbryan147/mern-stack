@@ -73,6 +73,16 @@ export default function LoginPage() {
               Register
             </span>
           </small>
+          <br />
+          <small>
+            <span
+              className="text-danger"
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate("/reset-password")}
+            >
+              Forgot Password?
+            </span>
+          </small>
         </div>
       </div>
     </div>

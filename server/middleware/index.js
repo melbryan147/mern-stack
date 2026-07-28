@@ -152,4 +152,12 @@ async function protect(req, res, next) {
     }
 }
 
-module.exports = {protect, isSamerole}
+async function setSecurityHeaders(req, res, next) {
+  res.setHeader(
+    "Content-Security-Policy",
+    "img-src 'self' data: https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com"
+  );
+  next();
+}
+
+module.exports = {protect, isSamerole, setSecurityHeaders}

@@ -1,40 +1,169 @@
 const db = require('../db');
+const path = require('path');
+const {verifyToken} = require('../utils');
+const fileUpload = require('express-fileupload');
 
-// ✅ Add new contact with numbers
-exports.addContact = async (req, res) => {
-  const connection = await db.pool.getConnection();
+// ✅ Add new contact with profile photo
+
+// Convert contact_numbers[x] keys into an array
+function normalizeContactNumbers(body) {
+  const numbers = [];
+
+  Object.keys(body).forEach((key) => {
+    if (key.startsWith("contact_numbers[")) {
+      numbers.push(body[key]);
+      delete body[key]; // clean up
+    }
+  });
+
+  if (numbers.length > 0) {
+    body.contact_numbers = numbers;
+  }
+
+  return body;
+}
+exports.addContact =async (req, res) => {
   try {
-    const { lastname, firstname, email, contact_numbers } = req.body;
+    const connection = await db.pool.getConnection();
+    let isStartBearer = req.headers.authorization.startsWith('Bearer')
+    let token = req.headers.authorization.split(" ")[1]
+    const { firstname, lastname, email, contact_numbers } = normalizeContactNumbers(req.body);
+    console.log(req.body)
+    console.log(verifyToken(token))
+    const decodedToken = verifyToken(token);
+    const ownerId = decodedToken.userId;
+    // Check if photo uploaded
+    let photoPath = "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // default icon
+    if (req.files && req.files.photo_url) {
+      const photo = req.files.photo_url;
+      const uploadPath = path.join(__dirname,"..","uploads", photo.name);
+
+      await photo.mv(uploadPath);
+      photoPath = `/uploads/${photo.name}`;
+    }
 
     await connection.beginTransaction();
 
-    // Insert into contacts
-    const [contactResult] = await connection.query(
-      `INSERT INTO contacts (lastname, firstname, email) VALUES (?, ?, ?)`,
-      [lastname, firstname, email]
+    // 1. Insert profile first
+    const [profileResult] = await connection.query(
+      `INSERT INTO profiles (photo_url) VALUES (?)`,
+      [photoPath]
     );
+    const profileId = profileResult.insertId;
 
+    // 2. Insert contact linked to profile
+    const [contactResult] = await connection.query(
+      `INSERT INTO contacts (firstname, lastname, email, profile_id, owner_id) VALUES (?, ?, ?, ?, ?)`,
+      [firstname, lastname, email, profileId, ownerId]
+    );
     const contactId = contactResult.insertId;
 
-    // Insert multiple numbers
+    // 3. Insert multiple numbers if provided
     if (Array.isArray(contact_numbers)) {
-      for (const number of contact_numbers) {
+      for (const num of contact_numbers) {
         await connection.query(
           `INSERT INTO contact_numbers (contact_id, contact_number) VALUES (?, ?)`,
-          [contactId, number]
+          [contactId, num]
         );
       }
     }
 
     await connection.commit();
-    res.status(201).json({ message: 'Contact added successfully', contactId });
+    res.status(201).json({
+      message: "Contact + profile added successfully",
+      contactId,
+      profileId,
+      photo_url: photoPath,
+    });
   } catch (error) {
     await connection.rollback();
+    console.log(error);
     res.status(500).json({ error: error.message });
   } finally {
     connection.release();
   }
-};
+}
+
+// exports.addContact = async (req, res) => {
+//   const connection = await db.pool.getConnection();
+//   try {
+//     const { lastname, firstname, email, contact_numbers, photo_url } = req.body;
+//     console.log(req.body)
+//     await connection.beginTransaction();
+
+//     // 1. Insert profile first
+//     const [profileResult] = await connection.query(
+//       `INSERT INTO profiles (photo_url) VALUES (?)`,
+//       [photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'] // default icon
+//     );
+//     const profileId = profileResult.insertId;
+
+//     // 2. Insert contact linked to profile
+//     const [contactResult] = await connection.query(
+//       `INSERT INTO contacts (lastname, firstname, email, profile_id) VALUES (?, ?, ?, ?)`,
+//       [lastname, firstname, email, profileId]
+//     );
+//     const contactId = contactResult.insertId;
+
+//     // 3. Insert multiple numbers
+//     if (Array.isArray(contact_numbers)) {
+//       for (const number of contact_numbers) {
+//         await connection.query(
+//           `INSERT INTO contact_numbers (contact_id, contact_number) VALUES (?, ?)`,
+//           [contactId, number]
+//         );
+//       }
+//     }
+
+//     await connection.commit();
+//     res.status(201).json({ 
+//       message: 'Contact + profile added successfully', 
+//       contactId, 
+//       profileId 
+//     });
+//   } catch (error) {
+//     await connection.rollback();
+//     res.status(500).json({ error: error.message });
+//   } finally {
+//     connection.release();
+//   }
+// };
+
+// // ✅ Add new contact with numbers
+// exports.addContact = async (req, res) => {
+//   const connection = await db.pool.getConnection();
+//   try {
+//     const { lastname, firstname, email, contact_numbers } = req.body;
+
+//     await connection.beginTransaction();
+
+//     // Insert into contacts
+//     const [contactResult] = await connection.query(
+//       `INSERT INTO contacts (lastname, firstname, email) VALUES (?, ?, ?)`,
+//       [lastname, firstname, email]
+//     );
+
+//     const contactId = contactResult.insertId;
+
+//     // Insert multiple numbers
+//     if (Array.isArray(contact_numbers)) {
+//       for (const number of contact_numbers) {
+//         await connection.query(
+//           `INSERT INTO contact_numbers (contact_id, contact_number) VALUES (?, ?)`,
+//           [contactId, number]
+//         );
+//       }
+//     }
+
+//     await connection.commit();
+//     res.status(201).json({ message: 'Contact added successfully', contactId });
+//   } catch (error) {
+//     await connection.rollback();
+//     res.status(500).json({ error: error.message });
+//   } finally {
+//     connection.release();
+//   }
+// };
 
 // ✅ Get all contacts with numbers
 exports.getContacts = async (req, res) => {
