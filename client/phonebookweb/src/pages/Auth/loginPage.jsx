@@ -5,9 +5,11 @@ import { useNavigate } from "react-router-dom";
 export default function LoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState(""); // ✅ error state
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError(""); // clear error when user types again
   };
 
   const handleSubmit = async (e) => {
@@ -26,6 +28,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error("Login error:", error);
+      setError("Invalid email or password. Please try again."); // ✅ user-friendly message
     }
   };
 
@@ -34,6 +37,11 @@ export default function LoginPage() {
       <div className="card shadow-sm p-4" style={{ maxWidth: "400px", width: "100%" }}>
         <h3 className="text-center text-primary mb-4">🔑 Login</h3>
         <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="alert alert-danger text-center py-2 mb-3">
+              {error}
+            </div>
+          )}
           <div className="mb-3">
             <label className="form-label">Email</label>
             <input

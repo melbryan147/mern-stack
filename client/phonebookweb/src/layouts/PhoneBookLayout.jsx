@@ -8,9 +8,10 @@ import {
 import {
   shareContact,
   unshareContact,
+  getSharedContacts,
 } from "../services/shareContactService";
 import { useNavigate } from "react-router-dom";
-
+import {jwtDecode} from "jwt-decode";
 export default function PhoneBook() {
   const navigate = useNavigate();
   const [contacts, setContacts] = useState([]);
@@ -24,10 +25,30 @@ export default function PhoneBook() {
   });
 
   const [shareForm, setShareForm] = useState({ contactId: null, sharedUserId: "" });
+  const [currentUserId, setCurrentUserId] = useState(0);
+  const [contact_shares, setContact_shares] = useState([]);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = jwtDecode(token);
+      console.log("Decoded JWT:", decoded);
+      setCurrentUserId(decoded.userId);
+    }
     fetchContacts();
   }, []);
+
+  useEffect(() => {
+    // const interval = setInterval(async () => {
+    async function shared() {
+            const data = await getSharedContacts();
+        setContact_shares(data);
+    }
+    // }, 1000);
+
+    // return () => clearInterval(interval);
+    shared()
+  },[])
 
   const fetchContacts = async () => {
     const data = await getContacts();
@@ -110,17 +131,38 @@ const handleDelete = async (id) => {
     setShareForm({ contactId, sharedUserId: "" });
   };
 
-  const handleShareSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await shareContact(shareForm.contactId, shareForm.sharedUserId);
-      alert("Contact shared successfully!");
-      setShareForm({ contactId: null, sharedUserId: "" });
-    } catch (err) {
-      alert("Error sharing contact");
-    }
-  };
 
+
+// Handle share submit
+const handleShareSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await shareContact(shareForm.contactId, shareForm.sharedUserId);
+    alert("Contact shared successfully!");
+    const updated = await getSharedContacts();
+    setContact_shares(updated);
+    setShareForm({ contactId: null, sharedUserId: "" }); // reset form
+  } catch (err) {
+    alert("Failed to share contact.");
+    console.error(err);
+  }
+};
+
+// Handle unshare
+const handleUnshare = async (contactId, userId, share) => {
+  console.log(share)
+  try {
+    await unshareContact(contactId, userId);
+    alert("Contact unshared successfully!");
+    const updated = await getSharedContacts();
+    console.log(updated)
+    setContact_shares(updated);
+  } catch (err) {
+    alert("Failed to unshare contact.");
+    console.error(err);
+  }
+};
+console.log(contact_shares)
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -212,8 +254,8 @@ const handleDelete = async (id) => {
         </div>
       </div>
 
-{/* Table */}
 <div className="table-responsive">
+  {/* ✅ Contacts Table */}
   <table className="table table-striped table-bordered table-hover align-middle">
     <thead className="table-primary">
       <tr>
@@ -228,6 +270,7 @@ const handleDelete = async (id) => {
     <tbody>
       {contacts.map((c) => (
         <tr key={c.contact_id}>
+          {console.log(c)}
           <td>
             <img
               src={c.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
@@ -241,32 +284,34 @@ const handleDelete = async (id) => {
           <td>{c.lastname}</td>
           <td>{c.email}</td>
           <td>
-            {/* ✅ Dropdown for contact numbers */}
             <select className="form-select form-select-sm">
+              {console.log(c)}
               {c.contact_numbers.map((num, idx) => (
                 <option key={idx} value={num}>
                   {num}
-                </option>
-              ))}
-            </select>
+                  </option>))}
+              </select>
           </td>
           <td>
             <div className="d-flex gap-2">
               <button
                 className="btn btn-sm btn-primary"
                 onClick={() => handleEdit(c)}
+                disabled={c.owner_id !== currentUserId}
               >
                 Edit
               </button>
               <button
                 className="btn btn-sm btn-danger"
                 onClick={() => handleDelete(c.contact_id)}
+                disabled={c.owner_id !== currentUserId}
               >
                 Delete
               </button>
               <button
                 className="btn btn-sm btn-warning"
                 onClick={() => openShareForm(c.contact_id)}
+                disabled={c.owner_id !== currentUserId}
               >
                 Share
               </button>
@@ -277,6 +322,49 @@ const handleDelete = async (id) => {
     </tbody>
   </table>
 </div>
+
+{/* ✅ Shared Contacts Table */}
+<div className="table-responsive mt-4">
+  <table className="table table-striped table-bordered table-hover align-middle">
+    <thead className="table-secondary">
+      <tr>
+        <th>Contact</th>
+        <th>Shared User</th>
+        <th>Email</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {contact_shares.filter(share => share.shared_user_id !== null).map((share) => (
+        <tr key={share.share_id}>
+          {/* Contact Info */}
+          <td>
+            {share.firstname} {share.lastname}
+          </td>
+
+          {/* Shared User Info */}
+          <td>
+            {share.firstname} {share.lastname}
+          </td>
+          <td>{share.email}</td>
+
+          {/* Actions */}
+          <td>
+            <button
+              className="btn btn-sm btn-outline-danger"
+              onClick={() => handleUnshare(share.contact_id, share.shared_user_id, share)}
+              disabled={share.owner_id !== currentUserId} // ✅ only owner can unshare
+            >
+              Unshare
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  </div>
+
+
 
       {/* Share Contact Form */}
       {shareForm.contactId && (
