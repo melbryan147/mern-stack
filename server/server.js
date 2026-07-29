@@ -19,4 +19,4 @@ app.use('/phonebook', phoneBookRoutes);
 app.use('/contacts', shareContactRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.listen(40132, () => console.log('Server running on https://mern-stack-3o8k.onrender.com'));
+app.listen(54987, () => console.log('Server running on https://mern-stack-3o8k.onrender.com'));
