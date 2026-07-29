@@ -1,7 +1,8 @@
 const dotenv = require('dotenv');
 const mysql = require('mysql2/promise');
 
-dotenv.config({path: '.env'})
+// dotenv.config({path: '.env'})
+dotenv.config({ path: '/custom/path/.env' })
 
 // Create the connection pool. The pool-specific settings are the defaults
 module.exports.pool = mysql.createPool({
